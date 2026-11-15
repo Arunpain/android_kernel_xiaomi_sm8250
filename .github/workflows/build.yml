@@ -53,10 +53,8 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/osm0sis/AnyKernel3.git AK3
 
-          # Copy Kernel Image
+          # Copy Kernel Image & DTB into AK3 root
           cp out/arch/arm64/boot/Image AK3/
-
-          # Copy DTB (injected into vendor_boot automatically)
           if [ -f out/arch/arm64/boot/dtb.img ]; then
             cp out/arch/arm64/boot/dtb.img AK3/dtb
           elif [ -f out/arch/arm64/boot/dts/vendor/qcom/munch.dtb ]; then
@@ -65,7 +63,7 @@ jobs:
 
           cd AK3
 
-          # Configure AnyKernel3 script for Munch & vendor_boot
+          # Write clean anykernel.sh (strictly targets boot partition)
           cat << 'EOF' > anykernel.sh
           ### AnyKernel3 Ramdisk Mod Script
           ## osm0sis @ xda-developers
@@ -83,17 +81,14 @@ jobs:
           device.name3=22021211RC
           device.name4=22021211RI
           device.name5=22021211RG
+          device.name6=POCO F4
+          device.name7=Redmi K40S
           supported.versions=11-17
           supported.patchlevels=
           '; } # end properties
 
           ### AnyKernel install
-          vendor_boot_attributes() {
-            set_perm_recursive 0 0 755 644 $RAMDISK/*;
-            set_perm_recursive 0 0 750 750 $RAMDISK/init* $RAMDISK/sbin;
-          }
-
-          BLOCK=vendor_boot;
+          BLOCK=boot;
           IS_SLOT_DEVICE=auto;
           RAMDISK_COMPRESSION=auto;
           PATCH_VBMETA_FLAG=auto;
@@ -102,12 +97,10 @@ jobs:
 
           dump_boot;
           write_boot;
-          ## end vendor_boot install
+          ## end install
           EOF
 
           sed -i 's/^[ \t]*//' anykernel.sh
-
-          # Clean up unnecessary repository files before packaging
           rm -rf .git README.md *placeholder
 
       - name: Upload Kernel Artifact
